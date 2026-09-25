@@ -244,3 +244,27 @@ class SettleEntry(BaseModel):
     field_5: str | None = None  # 已收金额
     field_6: str | None = None  # 开票状态
     field_7: str | None = None  # 结算状态
+
+class CreditEntry(BaseModel):
+    """授信档案明细结构。"""
+
+    field_0: str | None = None  # 客户编码
+    field_1: str | None = None  # 客户名称
+    field_2: str | None = None  # 授信额度
+    field_3: str | None = None  # 允许结算周期
+    field_4: str | None = None  # 在途挂账
+    field_5: str | None = None  # 剩余额度
+    field_6: str | None = None  # 逾期单数
+    field_7: str | None = None  # 授信状态
+
+class CreditJobEntry(BaseModel):
+    """赊账作业单明细结构。"""
+
+    field_0: str | None = None  # 作业单号
+    field_1: str | None = None  # 客户编码
+    field_2: str | None = None  # 作业内容
+    field_3: str | None = None  # 挂账金额
+    field_4: str | None = None  # 申请日期
+    field_5: str | None = None  # 约定结算日
+    field_6: str | None = None  # 是否逾期
+    field_7: str | None = None  # 作业状态

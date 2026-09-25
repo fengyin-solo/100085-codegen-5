@@ -33,3 +33,10 @@ body { margin: 0; background: #f6f8fb; color: #1f2937; }
 .link { border: none; background: none; color: var(--brand); cursor: pointer; padding: 0; }
 .page-foot { display: flex; justify-content: space-between; margin-top: 8px; font-size: 12px; color: var(--muted); }
 .error-text { color: #b42318; }
+.notice-text { color: #067647; font-size: 13px; }
+.section-title { font-size: 15px; margin: 18px 0 8px; }
+.form-panel { background: #fff; border: 1px solid var(--border); border-radius: 8px; padding: 12px; margin-bottom: 12px; }
+.form-panel h3 { margin: 0 0 10px; font-size: 14px; }
+.form-grid { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 10px; }
+.form-actions { display: flex; gap: 8px; }
+.row-flagged td { background: #fff4ed; }
