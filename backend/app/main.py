@@ -10,6 +10,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import settings
 from app.routers import ROUTERS
+from app import store as store_module
 from app.store import store
 
 app = FastAPI(title="港口集装箱作业调度平台", version="1.0.0")
@@ -24,6 +25,12 @@ app.add_middleware(
 
 for module in ROUTERS:
     app.include_router(module.router)
+
+
+@app.on_event("startup")
+def _bootstrap_credit_flags() -> None:
+    """种子数据就绪后跑一遍授信重判，逾期单对应的在途作业启动即带标。"""
+    store_module.bootstrap_credit_flags()
 
 
 @app.get("/api/health")

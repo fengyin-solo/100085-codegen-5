@@ -18,15 +18,16 @@ STATUSES = ["待核对", "核对中", "已确认", "已收款", "有争议"]
 
 @router.get("", response_model=PageResult[dict])
 def list_entries(
-    keyword: str | None = Query(default=None, description="按结算单号检索"),
+    keyword: str | None = Query(default=None, description="按结算单号或客户编码检索"),
     status: str | None = Query(default=None, description="待核对、核对中、已确认、已收款、有争议"),
+    overdue_only: bool | None = Query(default=None, description="true 只看逾期未结结算单"),
     page: int = 1,
     size: int = 20,
 ) -> PageResult[dict]:
-    """按结算单号与状态过滤作业结算列表；没有数据时返回空页，不报错。"""
+    """按结算单号、状态与逾期标记过滤作业结算列表；没有数据时返回空页，不报错。"""
     if size > 200:
         raise HTTPException(status_code=400, detail="每页最多 200 条，请缩小分页范围")
-    items, total = service.list_entries(keyword=keyword, status=status, page=page, size=size)
+    items, total = service.list_entries(keyword=keyword, status=status, overdue_only=overdue_only, page=page, size=size)
     return PageResult(items=items, total=total, page=page, size=size)
 
 
@@ -41,10 +42,12 @@ def get_entry(entry_id: int) -> dict:
 
 @router.post("", response_model=ActionResult)
 def create_entry(payload: EntryPayload) -> ActionResult:
-    """登记一条结算单，缺字段时说明原因而不是静默丢弃。"""
-    entry, missing = service.create_entry(payload.values)
+    """登记结算单并按货主挂账；编码不存在、日期非法、金额为负时逐字段说明原因。"""
+    entry, missing, field_errors = service.create_entry(payload.values)
     if missing:
-        return ActionResult(ok=False, message=f"缺少必填字段：{'、'.join(missing)}")
+        return ActionResult(ok=False, message=f"缺少必填字段：{'、'.join(missing)}", details={"字段错误": {field: "该项为必填，请补充" for field in missing}})
+    if field_errors:
+        return ActionResult(ok=False, message="结算单登记未通过校验，请按提示修改", details={"字段错误": field_errors})
     return ActionResult(ok=True, message="结算单已登记", entry=entry)
 
 

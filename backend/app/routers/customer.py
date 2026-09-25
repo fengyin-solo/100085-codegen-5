@@ -1,4 +1,4 @@
-"""货主档案接口：维护货主，覆盖审核客户、暂停合作、终止合作等动作。"""
+"""货主档案接口：维护货主、授信额度/账期，以及审核、暂停、终止等动作。"""
 from __future__ import annotations
 
 from typing import Any
@@ -18,7 +18,7 @@ STATUSES = ["待审核", "合作中", "已暂停", "已终止"]
 
 @router.get("", response_model=PageResult[dict])
 def list_entries(
-    keyword: str | None = Query(default=None, description="按客户编码检索"),
+    keyword: str | None = Query(default=None, description="按客户编码或名称检索"),
     status: str | None = Query(default=None, description="待审核、合作中、已暂停、已终止"),
     page: int = 1,
     size: int = 20,
@@ -41,11 +41,24 @@ def get_entry(entry_id: int) -> dict:
 
 @router.post("", response_model=ActionResult)
 def create_entry(payload: EntryPayload) -> ActionResult:
-    """登记一条货主，缺字段时说明原因而不是静默丢弃。"""
-    entry, missing = service.create_entry(payload.values)
+    """登记一条货主；缺字段、编码重复、额度为负数时逐字段说明原因与入口。"""
+    entry, missing, field_errors = service.create_entry(payload.values)
     if missing:
-        return ActionResult(ok=False, message=f"缺少必填字段：{'、'.join(missing)}")
+        return ActionResult(ok=False, message=f"缺少必填字段：{'、'.join(missing)}", details={"字段错误": {field: "该项为必填，请补充" for field in missing}})
+    if field_errors:
+        return ActionResult(ok=False, message="货主登记未通过校验，请按提示修改", details={"字段错误": field_errors})
     return ActionResult(ok=True, message="货主已登记", entry=entry)
+
+
+@router.put("/{entry_id}/credit", response_model=ActionResult)
+def update_credit(entry_id: int, payload: EntryPayload) -> ActionResult:
+    """调整货主授信额度/允许结算周期，并立即对在途作业重新判定。"""
+    entry, message, field_errors, flagged = service.update_credit(entry_id, payload.values)
+    if field_errors:
+        return ActionResult(ok=False, message=message, details={"字段错误": field_errors})
+    if entry is None:
+        return ActionResult(ok=False, message=message)
+    return ActionResult(ok=True, message=message, entry=entry, details={"不再合规的在途作业": flagged})
 
 
 @router.post("/{entry_id}/actions", response_model=ActionResult)

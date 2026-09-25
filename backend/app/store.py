@@ -47,3 +47,13 @@ class Store:
 
 
 store = Store()
+
+
+def bootstrap_credit_flags() -> None:
+    """启动钩子：按授信规则重判全部在途作业。
+
+    放在函数里延迟导入，避免 store ↔ services.credit 的循环导入。
+    """
+    from app.services.credit import recheck_all
+
+    recheck_all()

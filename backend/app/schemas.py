@@ -19,6 +19,8 @@ class ActionResult(BaseModel):
     ok: bool
     message: str
     entry: dict[str, Any] | None = None
+    # 结构化回执：字段级校验错误、授信拦截明细、额度调整后的重判结果都放这里
+    details: dict[str, Any] | None = None
 
 
 class EntryPayload(BaseModel):

@@ -20,13 +20,14 @@ STATUSES = ["待开工", "作业中", "待复核", "已完成"]
 def list_entries(
     keyword: str | None = Query(default=None, description="按任务编号检索"),
     status: str | None = Query(default=None, description="待开工、作业中、待复核、已完成"),
+    abnormal: bool | None = Query(default=None, description="true 只看授信异常的在途作业"),
     page: int = 1,
     size: int = 20,
 ) -> PageResult[dict]:
-    """按任务编号与状态过滤装卸任务列表；没有数据时返回空页，不报错。"""
+    """按任务编号、状态与授信异常标记过滤装卸任务列表；没有数据时返回空页，不报错。"""
     if size > 200:
         raise HTTPException(status_code=400, detail="每页最多 200 条，请缩小分页范围")
-    items, total = service.list_entries(keyword=keyword, status=status, page=page, size=size)
+    items, total = service.list_entries(keyword=keyword, status=status, abnormal=abnormal, page=page, size=size)
     return PageResult(items=items, total=total, page=page, size=size)
 
 
@@ -41,11 +42,13 @@ def get_entry(entry_id: int) -> dict:
 
 @router.post("", response_model=ActionResult)
 def create_entry(payload: EntryPayload) -> ActionResult:
-    """登记一条装卸任务，缺字段时说明原因而不是静默丢弃。"""
-    entry, missing = service.create_entry(payload.values)
+    """登记装卸任务（开单）：超出授信额度或存在逾期未结时拦截，并指出超额金额与逾期单。"""
+    entry, missing, detail = service.create_entry(payload.values)
     if missing:
-        return ActionResult(ok=False, message=f"缺少必填字段：{'、'.join(missing)}")
-    return ActionResult(ok=True, message="装卸任务已登记", entry=entry)
+        return ActionResult(ok=False, message=f"缺少必填字段：{'、'.join(missing)}", details={"字段错误": {field: "该项为必填，请补充" for field in missing}})
+    if detail is not None:
+        return ActionResult(ok=False, message=str(detail.get("说明", "开单未通过校验")), details=detail)
+    return ActionResult(ok=True, message="装卸任务已登记，授信校验通过", entry=entry)
 
 
 @router.post("/{entry_id}/actions", response_model=ActionResult)
